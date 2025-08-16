@@ -1,14 +1,14 @@
 import os
 import json
 from flask import Flask, request, jsonify
-from flask_cors import CORS # Correção: Importar da biblioteca correta
+from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore
 import google.generativeai as genai
 
 # --- CONFIGURAÇÃO INICIAL ---
 app = Flask(__name__)
-CORS(app) # Correção: Chamar a função CORS corretamente
+CORS(app)
 
 # Carrega as credenciais do Firebase a partir de uma variável de ambiente
 cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
@@ -58,10 +58,21 @@ def generate_quiz():
         """
 
         model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
         
-        quiz_text = response.text.replace("```json", "").replace("```", "").strip()
-        novo_quiz = json.loads(quiz_text)
+        # Correção: Definir o schema e pedir explicitamente um JSON
+        schema = {
+            "type": "object", "properties": { "quiz": { "type": "array", "items": { "type": "object", "properties": { "pergunta": {"type": "string"}, "opcoes": {"type": "array", "items": {"type": "string"}}, "respostaCorreta": {"type": "string"}, "explicacao": {"type": "string"} }, "required": ["pergunta", "opcoes", "respostaCorreta", "explicacao"] } } }, "required": ["quiz"]
+        }
+        
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=schema
+            )
+        )
+        
+        novo_quiz = json.loads(response.text)
 
         for questao in novo_quiz.get("quiz", []):
             questions_ref.add(questao)
@@ -71,7 +82,6 @@ def generate_quiz():
         print(f"Ocorreu um erro em /generate-quiz: {e}")
         return jsonify({"error": str(e)}), 500
 
-# --- NOVA ROTA DE ANÁLISE ---
 @app.route("/analyze-performance", methods=["POST"])
 def analyze_performance():
     if not GEMINI_API_KEY:
@@ -96,10 +106,21 @@ def analyze_performance():
         """
         
         model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
+
+        # Correção: Definir o schema e pedir explicitamente um JSON
+        schema = {
+            "type": "object", "properties": { "analise": { "type": "object", "properties": { "diagnosticoGeral": {"type": "string"}, "analiseDosErros": { "type": "array", "items": { "type": "object", "properties": { "pergunta": {"type": "string"}, "causaProvavel": {"type": "string"}, "recomendacao": {"type": "string"} }, "required": ["pergunta", "causaProvavel", "recomendacao"] } } }, "required": ["diagnosticoGeral", "analiseDosErros"] } }, "required": ["analise"]
+        }
+
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                response_mime_type="application/json",
+                response_schema=schema
+            )
+        )
         
-        analysis_text = response.text.replace("```json", "").replace("```", "").strip()
-        analysis_json = json.loads(analysis_text)
+        analysis_json = json.loads(response.text)
 
         return jsonify(analysis_json)
     except Exception as e:
