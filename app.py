@@ -1,13 +1,14 @@
 import os
 import json
-from flask import Flask, request, jsonify, cors
+from flask import Flask, request, jsonify
+from flask_cors import CORS # Correção: Importar da biblioteca correta
 import firebase_admin
 from firebase_admin import credentials, firestore
 import google.generativeai as genai
 
 # --- CONFIGURAÇÃO INICIAL ---
 app = Flask(__name__)
-cors.CORS(app) # Adiciona suporte a CORS para permitir a comunicação entre o site e a API
+CORS(app) # Correção: Chamar a função CORS corretamente
 
 # Carrega as credenciais do Firebase a partir de uma variável de ambiente
 cred_json_str = os.environ.get("GOOGLE_CREDENTIALS_JSON")
