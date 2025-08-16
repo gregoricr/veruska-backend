@@ -1,0 +1,9 @@
+# Ambiente Virtual
+venv/
+
+# Ficheiros Secretos
+credentials.json
+
+# Cache do Python
+__pycache__/
+*.pyc
